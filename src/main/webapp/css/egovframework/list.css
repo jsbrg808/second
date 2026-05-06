@@ -1,0 +1,97 @@
+/* ===== 목록 페이지 공통 스타일 ===== */
+
+body {
+    font-family: '돋움', Dotum, sans-serif;
+    font-size: 13px;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+    overflow-y: scroll;
+}
+
+/* 테이블 공통 */
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+th {
+    border: 1px solid #ccc;
+    padding: 5px 8px;
+    text-align: center;
+    background: #eef2f7;
+    background-image: none;
+    color: #003366;
+    font-family: '돋움', Dotum, sans-serif;
+    font-size: 13px;
+    font-weight: bold;
+    height: auto;
+    vertical-align: middle;
+}
+td {
+    border: 1px solid #ccc;
+    padding: 4px 8px;
+    text-align: center;
+    font-family: '돋움', Dotum, sans-serif;
+    font-size: 13px;
+    color: #333;
+}
+td.name,
+td.listtd {
+    text-align: left;
+}
+em {
+    font-size: 11px;
+    color: #888;
+}
+
+/* 5f / 5s / 5t 색상 구분 (td에만 적용) */
+.bg-f { background-color: #CCECFF; }
+.bg-s { background-color: #FFCCCC; }
+.bg-t { background-color: #FFFFCC; }
+.diff { color: red; font-weight: bold; }
+
+/* th는 색상 구분 없이 통일 */
+th.bg-f,
+th.bg-s,
+th.bg-t { background-color: #eef2f7; }
+
+/* 컬럼 너비 */
+col.c-name   { width: 10%; }
+col.c-data   { width: 10%; }
+col.c-data-15 { width: 15%; }
+
+/* ===== 동전 페이지 레이아웃 재정의 ===== */
+#content_pop {
+    float: none;
+    width: auto;
+    max-width: 100%;
+    padding: 0;
+}
+#title {
+    float: none;
+    width: auto;
+    height: auto;
+    padding: 6px 0 8px 0;
+    margin: 0 0 10px 0;
+    border-bottom: 2px solid #003366;
+}
+#title ul { float: none; }
+#title li {
+    width: auto;
+    font-size: 14px;
+    font-weight: bold;
+    color: #003366;
+    padding: 0;
+}
+#table {
+    float: none;
+    width: auto;
+    margin: 0 0 10px 0;
+}
+#sysbtn {
+    float: none;
+    display: block;
+    text-align: right;
+    margin-top: 8px;
+}
+.btn-arrow { margin-left: 6px; }

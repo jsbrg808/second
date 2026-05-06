@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//ibatis.apache.org//DTD SQL Map 2.0//EN" "http://ibatis.apache.org/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="Pogo">
+
+    <typeAlias alias="pogo5VO" type="egovframework.example.pogo.vo.Pogo5VO" />
+
+    <select id="pogo5sDAO.list" resultClass="pogo5VO">
+        SELECT SRL_NO  AS seq
+             , ALS     AS default_
+             , FORM_NO AS for_
+             , ALPH
+             , CONCAT('https://raw.githubusercontent.com/PokeMiners/pogo_assets/master/Images/Pokemon%20-%20256x256/Addressable%20Assets/',
+               (SELECT CASE WHEN GNDR = 'f' THEN IFNULL(TI.IMG_SRC2, TI.IMG_SRC)
+                            ELSE TI.IMG_SRC
+                       END
+                  FROM POKEDEX2 TI
+                 WHERE TI.NO = P.NO AND TI.FORM_NO = P.FORM_NO)) "imgSrc"
+             , CONCAT(NO, '_', FORM_NO, '_', GNDR) "imgAlt"
+          FROM POGO5S P
+         ORDER BY SRL_NO DESC
+    </select>
+
+    <select id="pogo5sDAO.listByNm" parameterClass="pogo5VO" resultClass="pogo5VO">
+        SELECT SRL_NO  AS seq
+             , ALS     AS default_
+             , FORM_NO AS for_
+             , ALPH
+             , CONCAT('https://raw.githubusercontent.com/PokeMiners/pogo_assets/master/Images/Pokemon%20-%20256x256/Addressable%20Assets/',
+               (SELECT CASE WHEN GNDR = 'f' THEN IFNULL(TI.IMG_SRC2, TI.IMG_SRC)
+                            ELSE TI.IMG_SRC
+                       END
+                  FROM POKEDEX2 TI
+                 WHERE TI.NO = P.NO AND TI.FORM_NO = P.FORM_NO)) "imgSrc"
+             , CONCAT(NO, '_', FORM_NO, '_', GNDR) "imgAlt"
+          FROM POGO5S P
+         WHERE NO IN (
+                   SELECT NO
+                     FROM POKEDEX
+                    WHERE NAME LIKE CONCAT(#srchNm#, '%')
+               )
+         ORDER BY SRL_NO DESC
+    </select>
+
+    <select id="pogo5sDAO.listByBasNm" parameterClass="pogo5VO" resultClass="pogo5VO">
+        SELECT SRL_NO  AS seq
+             , ALS     AS default_
+             , FORM_NO AS for_
+             , ALPH
+             , CONCAT('https://raw.githubusercontent.com/PokeMiners/pogo_assets/master/Images/Pokemon%20-%20256x256/Addressable%20Assets/',
+               (SELECT CASE WHEN GNDR = 'f' THEN IFNULL(TI.IMG_SRC2, TI.IMG_SRC)
+                            ELSE TI.IMG_SRC
+                       END
+                  FROM POKEDEX2 TI
+                 WHERE TI.NO = P.NO AND TI.FORM_NO = P.FORM_NO)) "imgSrc"
+             , CONCAT(NO, '_', FORM_NO, '_', GNDR) "imgAlt"
+          FROM POGO5S P
+         WHERE NO IN (
+                   SELECT NO
+                     FROM POKEDEX
+                    WHERE BASE_NO IN (
+                              SELECT BASE_NO
+                                FROM POKEDEX
+                               WHERE NAME LIKE CONCAT(#srchNm#, '%')
+                          )
+               )
+         ORDER BY SRL_NO DESC
+    </select>
+
+    <insert id="pogo5sDAO.append" parameterClass="pogo5VO">
+        INSERT INTO POGO5S (
+               SRL_NO
+             , ALS
+             , FORM_NO
+             , ALPH
+             , GNDR
+             , LVL
+             , NO
+             , IV
+        )
+        VALUES (
+               (SELECT max_seq FROM (SELECT MAX(SRL_NO) + 1 AS max_seq FROM POGO5S) AS t)
+             , #default_#
+             , IFNULL(NULLIF(#for_#, ''), 1)
+             , IFNULL(NULLIF(#alp#, ''), 0)
+             , #gender#
+             , #lvl#
+             , (SELECT NO FROM POKEDEX WHERE NAME = #name#)
+             , #iv#
+        )
+    </insert>
+
+    <update id="pogo5sDAO.update" parameterClass="pogo5VO">
+        UPDATE POGO5S
+           SET ALS     = #default_#
+             , FORM_NO = IFNULL(NULLIF(#for_#, ''), 1)
+             , ALPH    = IFNULL(NULLIF(#alp#, ''), 0)
+             , GNDR    = #gender#
+             , LVL     = #lvl#
+             , NO      = (SELECT NO FROM POKEDEX WHERE NAME = #name#)
+             , IV      = #iv#
+         WHERE SRL_NO = #seq#
+    </update>
+
+    <delete id="pogo5sDAO.delete" parameterClass="pogo5VO">
+        DELETE FROM POGO5S
+         WHERE SRL_NO = #seq#
+    </delete>
+
+    <update id="pogo5sDAO.updateDec" parameterClass="pogo5VO">
+        UPDATE POGO5S
+           SET SRL_NO = SRL_NO - 1
+         WHERE SRL_NO > #seq#
+         ORDER BY SRL_NO ASC
+    </update>
+
+    <update id="pogo5sDAO.updateInc" parameterClass="pogo5VO">
+        UPDATE POGO5S
+           SET SRL_NO = SRL_NO + 1
+         WHERE SRL_NO >= #seq#
+         ORDER BY SRL_NO DESC
+    </update>
+
+    <insert id="pogo5sDAO.insert" parameterClass="pogo5VO">
+        INSERT INTO POGO5S (
+               SRL_NO
+             , ALS
+             , FORM_NO
+             , ALPH
+             , GNDR
+             , LVL
+             , NO
+             , IV
+        )
+        VALUES (
+               #seq#
+             , #default_#
+             , IFNULL(NULLIF(#for_#, ''), 1)
+             , IFNULL(NULLIF(#alp#, ''), 0)
+             , #gender#
+             , #lvl#
+             , (SELECT NO FROM POKEDEX WHERE NAME = #name#)
+             , #iv#
+        )
+    </insert>
+
+</sqlMap>

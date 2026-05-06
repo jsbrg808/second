@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMapConfig PUBLIC "-//ibatis.apache.org//DTD SQL Map Config 2.0//EN" "http://ibatis.apache.org/dtd/sql-map-config-2.dtd">
+
+<sqlMapConfig>
+    <sqlMap resource="egovframework/sqlmap/example/coin/Code_SQL.xml" />
+    <sqlMap resource="egovframework/sqlmap/example/coin/Coin_SQL.xml" />
+    
+    <sqlMap resource="egovframework/sqlmap/example/pogo/Pogo5f_SQL.xml" />
+    <sqlMap resource="egovframework/sqlmap/example/pogo/Pogo5s_SQL.xml" />
+    <sqlMap resource="egovframework/sqlmap/example/pogo/Pogo5t_SQL.xml" />
+    <sqlMap resource="egovframework/sqlmap/example/pogo/Pogo5pc2_SQL.xml" />
+    <sqlMap resource="egovframework/sqlmap/example/pogo/Pogo5de2_SQL.xml" />
+    <sqlMap resource="egovframework/sqlmap/example/pogo/Pogo5yn_SQL.xml" />
+</sqlMapConfig>

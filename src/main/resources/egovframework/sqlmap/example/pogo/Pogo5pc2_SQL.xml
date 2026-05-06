@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//ibatis.apache.org//DTD SQL Map 2.0//EN" "http://ibatis.apache.org/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="Pogo5pc2">
+
+    <typeAlias alias="pogo5pc2VO" type="egovframework.example.pogo.vo.Pogo5pc2VO" />
+
+    <sql id="ivCond">
+        (f.iv = 100 AND f.lvl &lt;&gt; 35 + f.alph)
+        OR (f.iv IN (98, 96) AND f.lvl &lt;&gt; 35)
+        OR (f.iv IN (93, 91) AND f.lvl &lt;&gt; 30)
+        OR (f.iv IN (89, 87) AND f.lvl &lt;&gt; 25)
+        OR (f.iv IN (84, 82) AND f.lvl &lt;&gt; 20)
+    </sql>
+
+    <select id="pogo5pc2DAO.list" resultClass="pogo5pc2VO">
+WITH
+bas_list AS (
+    SELECT DISTINCT base_no AS base_no
+      FROM pokedex
+     WHERE no IN (
+        SELECT no
+          FROM pogo5f
+        UNION ALL
+        SELECT no
+          FROM pogo5s
+        UNION ALL
+        SELECT no
+          FROM pogo5t
+    )
+),
+poke_agg AS (
+    SELECT d.base_no AS base_no
+         , SUM(CASE d.gndr_rt WHEN '10' THEN 2 * d.no_form
+                                   WHEN '01' THEN 0
+                                   WHEN '00' THEN 0
+                                   ELSE d.no_form END) AS mal_max
+         , SUM(CASE d.gndr_rt WHEN '01' THEN 2 * d.no_form
+                                   WHEN '10' THEN 0
+                                   WHEN '00' THEN 0
+                                   ELSE d.no_form END) AS fem_max
+         , SUM(CASE d.gndr_rt WHEN '00' THEN 2 * d.no_form
+                                   ELSE 0 END) AS gen_max
+      FROM pokedex d
+      JOIN bas_list b ON d.base_no = b.base_no
+     GROUP BY d.base_no
+),
+pogo_total AS (
+    SELECT SUM(mal_max + fem_max + gen_max) AS total
+      FROM poke_agg
+),
+f_pow AS (
+    SELECT d.base_no AS base_no
+         , GROUP_CONCAT(CONCAT(f.gndr, f.lvl) ORDER BY f.gndr DESC, f.lvl DESC SEPARATOR ',') AS pow
+      FROM pogo5f f
+      JOIN pokedex d ON d.no = f.no
+     WHERE <include refid="ivCond"/>
+     GROUP BY d.base_no
+),
+f_cnt AS (
+    SELECT d.base_no AS base_no
+         , SUM(CASE WHEN f.gndr = 'm' THEN 1 ELSE 0 END) AS mal_sum
+         , SUM(CASE WHEN f.gndr = 'f' THEN 1 ELSE 0 END) AS fem_sum
+         , SUM(CASE WHEN f.gndr = 'g' THEN 1 ELSE 0 END) AS gen_sum
+      FROM pogo5f f
+      JOIN pokedex d ON d.no = f.no
+     GROUP BY d.base_no
+),
+s_pow AS (
+    SELECT d.base_no AS base_no
+         , GROUP_CONCAT(CONCAT(f.gndr, f.lvl) ORDER BY f.gndr DESC, f.lvl DESC SEPARATOR ',') AS pow
+      FROM pogo5s f
+      JOIN pokedex d ON d.no = f.no
+     WHERE <include refid="ivCond"/>
+     GROUP BY d.base_no
+),
+s_cnt AS (
+    SELECT d.base_no AS base_no
+         , SUM(CASE WHEN f.gndr = 'm' THEN 1 ELSE 0 END) AS mal_sum
+         , SUM(CASE WHEN f.gndr = 'f' THEN 1 ELSE 0 END) AS fem_sum
+         , SUM(CASE WHEN f.gndr = 'g' THEN 1 ELSE 0 END) AS gen_sum
+      FROM pogo5s f
+      JOIN pokedex d ON d.no = f.no
+     GROUP BY d.base_no
+),
+t_pow AS (
+    SELECT d.base_no AS base_no
+         , GROUP_CONCAT(CONCAT(f.gndr, f.lvl) ORDER BY f.gndr DESC, f.lvl DESC SEPARATOR ',') AS pow
+      FROM pogo5t f
+      JOIN pokedex d ON d.no = f.no
+     WHERE <include refid="ivCond"/>
+     GROUP BY d.base_no
+),
+t_cnt AS (
+    SELECT d.base_no AS base_no
+         , SUM(CASE WHEN f.gndr = 'm' THEN 1 ELSE 0 END) AS mal_sum
+         , SUM(CASE WHEN f.gndr = 'f' THEN 1 ELSE 0 END) AS fem_sum
+         , SUM(CASE WHEN f.gndr = 'g' THEN 1 ELSE 0 END) AS gen_sum
+      FROM pogo5t f
+      JOIN pokedex d ON d.no = f.no
+     GROUP BY d.base_no
+)
+SELECT pa.base_no                                                                                   "basId"
+     , pk.dv                                                                                       "div"
+     , pk.name                                                                                      "name"
+     , REPLACE(SUBSTRING_INDEX(CONCAT(IFNULL(fp.pow, ''), ',,,,,,,,,,'), ',', 10),
+               ',', CHAR(9))                                                                        "pogo5fPow"
+     , REPLACE(
+           CONCAT(CASE WHEN pa.mal_max &lt;&gt; IFNULL(fc.mal_sum, 0) THEN CAST(pa.mal_max - IFNULL(fc.mal_sum, 0) AS CHAR) ELSE '' END,
+                  ',',
+                  CASE WHEN pa.fem_max &lt;&gt; IFNULL(fc.fem_sum, 0) THEN CAST(pa.fem_max - IFNULL(fc.fem_sum, 0) AS CHAR) ELSE '' END,
+                  ',',
+                  CASE WHEN pa.gen_max &lt;&gt; IFNULL(fc.gen_sum, 0) THEN CAST(pa.gen_max - IFNULL(fc.gen_sum, 0) AS CHAR) ELSE '' END)
+           , ',', CHAR(9))                                                                          "pogo5fCat"
+     , REPLACE(SUBSTRING_INDEX(CONCAT(IFNULL(sp.pow, ''), ',,,,,,,,,,'), ',', 10),
+               ',', CHAR(9))                                                                        "pogo5sPow"
+     , REPLACE(
+           CONCAT(CASE WHEN pa.mal_max &lt;&gt; IFNULL(sc.mal_sum, 0) THEN CAST(pa.mal_max - IFNULL(sc.mal_sum, 0) AS CHAR) ELSE '' END,
+                  ',',
+                  CASE WHEN pa.fem_max &lt;&gt; IFNULL(sc.fem_sum, 0) THEN CAST(pa.fem_max - IFNULL(sc.fem_sum, 0) AS CHAR) ELSE '' END,
+                  ',',
+                  CASE WHEN pa.gen_max &lt;&gt; IFNULL(sc.gen_sum, 0) THEN CAST(pa.gen_max - IFNULL(sc.gen_sum, 0) AS CHAR) ELSE '' END)
+           , ',', CHAR(9))                                                                          "pogo5sCat"
+     , REPLACE(SUBSTRING_INDEX(CONCAT(IFNULL(tp.pow, ''), ',,,,,,,,,,'), ',', 10),
+               ',', CHAR(9))                                                                        "pogo5tPow"
+     , REPLACE(
+           CONCAT(CASE WHEN pa.mal_max &lt;&gt; IFNULL(tc.mal_sum, 0) THEN CAST(pa.mal_max - IFNULL(tc.mal_sum, 0) AS CHAR) ELSE '' END,
+                  ',',
+                  CASE WHEN pa.fem_max &lt;&gt; IFNULL(tc.fem_sum, 0) THEN CAST(pa.fem_max - IFNULL(tc.fem_sum, 0) AS CHAR) ELSE '' END,
+                  ',',
+                  CASE WHEN pa.gen_max &lt;&gt; IFNULL(tc.gen_sum, 0) THEN CAST(pa.gen_max - IFNULL(tc.gen_sum, 0) AS CHAR) ELSE '' END)
+           , ',', CHAR(9))                                                                          "pogo5tCat"
+     , REPLACE(
+           CONCAT(CASE WHEN pa.mal_max &lt;&gt; 0 THEN CAST(pa.mal_max AS CHAR) ELSE '' END,
+                  ',',
+                  CASE WHEN pa.fem_max &lt;&gt; 0 THEN CAST(pa.fem_max AS CHAR) ELSE '' END,
+                  ',',
+                  CASE WHEN pa.gen_max &lt;&gt; 0 THEN CAST(pa.gen_max AS CHAR) ELSE '' END)
+           , ',', CHAR(9))                                                                          "pogoMax"
+     , pt.total                                                                                     "pogoTotal"
+  FROM poke_agg pa
+  JOIN pokedex pk ON pk.no = pa.base_no
+  CROSS JOIN pogo_total pt
+  LEFT JOIN f_pow fp ON fp.base_no = pa.base_no
+  LEFT JOIN f_cnt fc ON fc.base_no = pa.base_no
+  LEFT JOIN s_pow sp ON sp.base_no = pa.base_no
+  LEFT JOIN s_cnt sc ON sc.base_no = pa.base_no
+  LEFT JOIN t_pow tp ON tp.base_no = pa.base_no
+  LEFT JOIN t_cnt tc ON tc.base_no = pa.base_no
+ WHERE fp.base_no IS NOT NULL
+    OR (pa.mal_max &lt;&gt; IFNULL(fc.mal_sum, 0) OR pa.fem_max &lt;&gt; IFNULL(fc.fem_sum, 0) OR pa.gen_max &lt;&gt; IFNULL(fc.gen_sum, 0))
+    OR sp.base_no IS NOT NULL
+    OR (pa.mal_max &lt;&gt; IFNULL(sc.mal_sum, 0) OR pa.fem_max &lt;&gt; IFNULL(sc.fem_sum, 0) OR pa.gen_max &lt;&gt; IFNULL(sc.gen_sum, 0))
+    OR tp.base_no IS NOT NULL
+    OR (pa.mal_max &lt;&gt; IFNULL(tc.mal_sum, 0) OR pa.fem_max &lt;&gt; IFNULL(tc.fem_sum, 0) OR pa.gen_max &lt;&gt; IFNULL(tc.gen_sum, 0))
+ ORDER BY pk.name
+    </select>
+
+</sqlMap>

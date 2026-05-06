@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//ibatis.apache.org//DTD SQL Map 2.0//EN" "http://ibatis.apache.org/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="Coin">
+
+    <typeAlias alias="coinVO" type="egovframework.example.coin.vo.CoinVO" />
+
+    <select id="coinDAO.list" parameterClass="coinVO" resultClass="coinVO">
+        SELECT C.COIN_VOL            "coinVol"
+             , C.GRP2_NO             "grp2No"
+             , C.CNTR_NO             "cntrNo"
+             , C.COIN_NO             "coinNo"
+             , C.COIN_YEARS          "coinYears"
+             , C.COIN_YEAR2S         "coinYear2s"
+             , CG.CODE_NAME          "grp2Name"
+             , CC.CODE_NAME          "cntrName"
+             , CN.CODE_NAME          "coinName"
+             , CN.CODE_ETC           "coinEtc"
+             , COALESCE(CT.cnt, 0)   "cntrCnt"
+          FROM COIN C
+          LEFT JOIN CODE CG ON CG.CODE_DIV = 'GRP2' AND CG.CODE_NO = C.GRP2_NO
+          LEFT JOIN CODE CC ON CC.CODE_DIV = 'CNTR' AND CC.CODE_NO = C.CNTR_NO
+          LEFT JOIN CODE CN ON CN.CODE_DIV = 'COIN' AND CN.CODE_NO = C.COIN_NO
+          LEFT JOIN (SELECT CNTR_NO, COUNT(*) AS cnt FROM COIN GROUP BY CNTR_NO) CT ON CT.CNTR_NO = C.CNTR_NO
+         ORDER BY C.COIN_VOL, C.GRP2_NO, C.CNTR_NO, C.COIN_NO
+    </select>
+
+</sqlMap>

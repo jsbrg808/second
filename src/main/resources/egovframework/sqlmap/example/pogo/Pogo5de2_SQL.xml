@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//ibatis.apache.org//DTD SQL Map 2.0//EN" "http://ibatis.apache.org/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="Pogo5de2">
+
+    <typeAlias alias="pogo5de2VO" type="egovframework.example.pogo.vo.Pogo5de2VO" />
+
+    <select id="pogo5de2DAO.list" resultClass="pogo5de2VO">
+WITH
+bas_list AS (
+    SELECT DISTINCT base_no AS base_no
+      FROM pokedex
+     WHERE no IN (
+        SELECT no
+          FROM pogo5f
+        UNION ALL
+        SELECT no
+          FROM pogo5s
+        UNION ALL
+        SELECT no
+          FROM pogo5t
+    )
+),
+f_dup AS (
+    SELECT base_no
+         , GROUP_CONCAT(form_no ORDER BY form_no SEPARATOR ',') AS dup
+      FROM (
+        SELECT DISTINCT d.base_no AS base_no
+             , p.form_no
+          FROM pogo5f p
+          JOIN pokedex d ON d.no = p.no
+         GROUP BY d.base_no, p.no, p.form_no
+        HAVING COUNT(*) > 2
+    ) t
+     GROUP BY base_no
+),
+s_dup AS (
+    SELECT base_no
+         , GROUP_CONCAT(form_no ORDER BY form_no SEPARATOR ',') AS dup
+      FROM (
+        SELECT DISTINCT d.base_no AS base_no
+             , p.form_no
+          FROM pogo5s p
+          JOIN pokedex d ON d.no = p.no
+         GROUP BY d.base_no, p.no, p.form_no
+        HAVING COUNT(*) > 2
+    ) t
+     GROUP BY base_no
+),
+t_dup AS (
+    SELECT base_no
+         , GROUP_CONCAT(form_no ORDER BY form_no SEPARATOR ',') AS dup
+      FROM (
+        SELECT DISTINCT d.base_no AS base_no, p.form_no
+          FROM pogo5t p
+          JOIN pokedex d ON d.no = p.no
+         GROUP BY d.base_no, p.no, p.form_no
+        HAVING COUNT(*) > 2
+    ) t
+     GROUP BY base_no
+),
+evo_ids AS (
+    SELECT pk.base_no AS base_no
+         , MAX(CASE WHEN pk.evl = 0 THEN pk.no END) AS id0
+         , MAX(CASE WHEN pk.evl = 1 THEN pk.no END) AS id1
+         , MAX(CASE WHEN pk.evl = 2 THEN pk.no END) AS id2
+      FROM pokedex pk
+      JOIN bas_list bl ON pk.base_no = bl.base_no
+     GROUP BY pk.base_no
+),
+f_evo1_raw AS (
+    SELECT pk.base_no AS base_no
+         , p.gndr AS gen
+         , GROUP_CONCAT(p.no * 100 + p.form_no ORDER BY p.form_no + pk.beta, p.no ASC SEPARATOR ',') AS id_ord
+         , GROUP_CONCAT(p.no * 100 + p.form_no ORDER BY p.form_no + pk.beta, p.srl_no DESC SEPARATOR ',') AS seq_ord
+      FROM pogo5f p
+      JOIN pokedex pk ON pk.no = p.no
+      JOIN evo_ids ei ON pk.base_no = ei.base_no
+                     AND pk.no = CASE pk.evl WHEN 0 THEN ei.id0
+                                             WHEN 1 THEN ei.id1
+                                             WHEN 2 THEN ei.id2 END
+     WHERE p.iv = 100
+     GROUP BY pk.base_no, p.gndr
+),
+f_evo2_raw AS (
+    SELECT pk.base_no AS base_no
+         , p.gndr AS gen
+         , pk.evl
+         , GROUP_CONCAT(p.no * 100 + p.form_no ORDER BY p.form_no + pk.beta, p.no DESC SEPARATOR ',') AS id_ord
+         , GROUP_CONCAT(p.no * 100 + p.form_no ORDER BY p.form_no + pk.beta, p.srl_no DESC SEPARATOR ',') AS seq_ord
+      FROM pogo5f p
+      JOIN pokedex pk ON pk.no = p.no
+      JOIN bas_list ON pk.base_no = bas_list.base_no
+     WHERE p.iv = 100
+     GROUP BY pk.base_no, p.gndr, pk.evl
+),
+f_evo2 AS (
+    SELECT base_no
+         , gen
+         , MAX(CASE WHEN id_ord &lt;&gt; seq_ord THEN '2' ELSE '' END) AS flag
+      FROM f_evo2_raw
+     GROUP BY base_no, gen
+),
+f_evo_per_gender AS (
+    SELECT COALESCE(e1.base_no, e2.base_no) AS base_no
+         , COALESCE(e1.gen, e2.gen) AS gen
+         , CONCAT(CASE WHEN e1.id_ord &lt;&gt; e1.seq_ord THEN '1' ELSE '' END,
+                  IFNULL(e2.flag, '')) AS gender_flag
+      FROM f_evo1_raw e1
+      LEFT JOIN f_evo2 e2 ON e1.base_no = e2.base_no
+                         AND e1.gen = e2.gen
+    UNION ALL
+    SELECT e2.base_no AS base_no
+         , e2.gen AS gen
+         , IFNULL(e2.flag, '') AS gender_flag
+      FROM f_evo1_raw e1
+      RIGHT JOIN f_evo2 e2 ON e1.base_no = e2.base_no
+                          AND e1.gen = e2.gen
+     WHERE e1.base_no IS NULL
+),
+f_evo AS (
+    SELECT base_no
+         , CONCAT(IFNULL(MAX(CASE WHEN gen = 'm' THEN gender_flag END), ''), ',',
+                  IFNULL(MAX(CASE WHEN gen = 'f' THEN gender_flag END), ''), ',',
+                  IFNULL(MAX(CASE WHEN gen = 'g' THEN gender_flag END), ''), ',') AS evo
+      FROM f_evo_per_gender
+     GROUP BY base_no
+),
+s_evo1_raw AS (
+    SELECT pk.base_no AS base_no
+         , p.gndr AS gen
+         , GROUP_CONCAT(p.no * 100 + p.form_no ORDER BY p.form_no + pk.beta, p.no ASC SEPARATOR ',') AS id_ord
+         , GROUP_CONCAT(p.no * 100 + p.form_no ORDER BY p.form_no + pk.beta, p.srl_no DESC SEPARATOR ',') AS seq_ord
+      FROM pogo5s p
+      JOIN pokedex pk ON pk.no = p.no
+      JOIN evo_ids ei ON pk.base_no = ei.base_no
+                     AND pk.no = CASE pk.evl WHEN 0 THEN ei.id0
+                                             WHEN 1 THEN ei.id1
+                                             WHEN 2 THEN ei.id2 END
+     WHERE p.iv = 100
+     GROUP BY pk.base_no, p.gndr
+),
+s_evo2_raw AS (
+    SELECT pk.base_no AS base_no
+         , p.gndr AS gen
+         , pk.evl
+         , GROUP_CONCAT(p.no * 100 + p.form_no ORDER BY p.form_no + pk.beta, p.no DESC SEPARATOR ',') AS id_ord
+         , GROUP_CONCAT(p.no * 100 + p.form_no ORDER BY p.form_no + pk.beta, p.srl_no DESC SEPARATOR ',') AS seq_ord
+      FROM pogo5s p
+      JOIN pokedex pk ON pk.no = p.no
+      JOIN bas_list ON pk.base_no = bas_list.base_no
+     WHERE p.iv = 100
+     GROUP BY pk.base_no, p.gndr, pk.evl
+),
+s_evo2 AS (
+    SELECT base_no
+         , gen
+         , MAX(CASE WHEN id_ord &lt;&gt; seq_ord THEN '2' ELSE '' END) AS flag
+      FROM s_evo2_raw
+     GROUP BY base_no, gen
+),
+s_evo_per_gender AS (
+    SELECT COALESCE(e1.base_no, e2.base_no) AS base_no
+         , COALESCE(e1.gen, e2.gen) AS gen
+         , CONCAT(CASE WHEN e1.id_ord &lt;&gt; e1.seq_ord THEN '1' ELSE '' END,
+                  IFNULL(e2.flag, '')) AS gender_flag
+      FROM s_evo1_raw e1
+      LEFT JOIN s_evo2 e2 ON e1.base_no = e2.base_no
+                         AND e1.gen = e2.gen
+    UNION ALL
+    SELECT e2.base_no AS base_no
+         , e2.gen AS gen
+         , IFNULL(e2.flag, '') AS gender_flag
+      FROM s_evo1_raw e1
+      RIGHT JOIN s_evo2 e2 ON e1.base_no = e2.base_no
+                          AND e1.gen = e2.gen
+     WHERE e1.base_no IS NULL
+),
+s_evo AS (
+    SELECT base_no
+         , CONCAT(IFNULL(MAX(CASE WHEN gen = 'm' THEN gender_flag END), ''), ',',
+                  IFNULL(MAX(CASE WHEN gen = 'f' THEN gender_flag END), ''), ',',
+                  IFNULL(MAX(CASE WHEN gen = 'g' THEN gender_flag END), ''), ',') AS evo
+      FROM s_evo_per_gender
+      GROUP BY base_no
+),
+t_evo1_raw AS (
+    SELECT pk.base_no AS base_no
+         , p.gndr AS gen
+         , GROUP_CONCAT(p.no * 100 + p.form_no ORDER BY p.form_no + pk.beta, p.no ASC SEPARATOR ',') AS id_ord
+         , GROUP_CONCAT(p.no * 100 + p.form_no ORDER BY p.form_no + pk.beta, p.srl_no DESC SEPARATOR ',') AS seq_ord
+      FROM pogo5t p
+      JOIN pokedex pk ON pk.no = p.no
+      JOIN evo_ids ei ON pk.base_no = ei.base_no
+                     AND pk.no = CASE pk.evl WHEN 0 THEN ei.id0
+                                             WHEN 1 THEN ei.id1
+                                             WHEN 2 THEN ei.id2 END
+     WHERE p.iv = 100
+     GROUP BY pk.base_no, p.gndr
+),
+t_evo2_raw AS (
+    SELECT pk.base_no AS base_no
+         , p.gndr AS gen
+         , pk.evl
+         , GROUP_CONCAT(p.no * 100 + p.form_no ORDER BY p.form_no + pk.beta, p.no DESC SEPARATOR ',') AS id_ord
+         , GROUP_CONCAT(p.no * 100 + p.form_no ORDER BY p.form_no + pk.beta, p.srl_no DESC SEPARATOR ',') AS seq_ord
+      FROM pogo5t p
+      JOIN pokedex pk ON pk.no = p.no
+      JOIN bas_list ON pk.base_no = bas_list.base_no
+     WHERE p.iv = 100
+     GROUP BY pk.base_no, p.gndr, pk.evl
+),
+t_evo2 AS (
+    SELECT base_no
+         , gen
+         , MAX(CASE WHEN id_ord &lt;&gt; seq_ord THEN '2' ELSE '' END) AS flag
+      FROM t_evo2_raw
+     GROUP BY base_no, gen
+),
+t_evo_per_gender AS (
+    SELECT COALESCE(e1.base_no, e2.base_no) AS base_no
+         , COALESCE(e1.gen, e2.gen) AS gen
+         , CONCAT(CASE WHEN e1.id_ord &lt;&gt; e1.seq_ord THEN '1' ELSE '' END,
+                  IFNULL(e2.flag, '')) AS gender_flag
+      FROM t_evo1_raw e1
+      LEFT JOIN t_evo2 e2 ON e1.base_no = e2.base_no AND e1.gen = e2.gen
+    UNION ALL
+    SELECT e2.base_no AS base_no
+         , e2.gen AS gen
+         , IFNULL(e2.flag, '') AS gender_flag
+      FROM t_evo1_raw e1
+      RIGHT JOIN t_evo2 e2 ON e1.base_no = e2.base_no AND e1.gen = e2.gen
+     WHERE e1.base_no IS NULL
+),
+t_evo AS (
+    SELECT base_no
+         , CONCAT(IFNULL(MAX(CASE WHEN gen = 'm' THEN gender_flag END), ''), ',',
+                  IFNULL(MAX(CASE WHEN gen = 'f' THEN gender_flag END), ''), ',',
+                  IFNULL(MAX(CASE WHEN gen = 'g' THEN gender_flag END), ''), ',') AS evo
+      FROM t_evo_per_gender
+     GROUP BY base_no
+)
+SELECT bl.base_no                         "basId"
+     , pk.dv                              "div"
+     , pk.name                            "name"
+     , fd.dup                             "pogo5fDup"
+     , TRIM(TRAILING ',' FROM fe.evo)     "pogo5fEvo"
+     , sd.dup                             "pogo5sDup"
+     , TRIM(TRAILING ',' FROM se.evo)     "pogo5sEvo"
+     , td.dup                             "pogo5tDup"
+     , TRIM(TRAILING ',' FROM te.evo)     "pogo5tEvo"
+  FROM bas_list bl
+  JOIN pokedex pk ON pk.no = bl.base_no
+  LEFT JOIN f_dup fd ON fd.base_no = bl.base_no
+  LEFT JOIN f_evo fe ON fe.base_no = bl.base_no
+  LEFT JOIN s_dup sd ON sd.base_no = bl.base_no
+  LEFT JOIN s_evo se ON se.base_no = bl.base_no
+  LEFT JOIN t_dup td ON td.base_no = bl.base_no
+  LEFT JOIN t_evo te ON te.base_no = bl.base_no
+ WHERE fd.base_no IS NOT NULL
+    OR NULLIF(TRIM(TRAILING ',' FROM fe.evo), '') IS NOT NULL
+    OR sd.base_no IS NOT NULL
+    OR NULLIF(TRIM(TRAILING ',' FROM se.evo), '') IS NOT NULL
+    OR td.base_no IS NOT NULL
+    OR NULLIF(TRIM(TRAILING ',' FROM te.evo), '') IS NOT NULL
+ ORDER BY pk.name
+    </select>
+
+</sqlMap>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//ibatis.apache.org//DTD SQL Map 2.0//EN" "http://ibatis.apache.org/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="Code">
+
+    <typeAlias alias="codeVO" type="egovframework.example.coin.vo.CodeVO" />
+
+    <select id="codeDAO.list" resultClass="codeVO">
+        SELECT CODE_DIV "codeDiv"
+             , CODE_NO "codeNo"
+             , CODE_NAME "codeName"
+             , CODE_ETC "codeEtc"
+        FROM CODE
+        WHERE CODE_DIV = 'GRP2'
+        ORDER BY CODE_DIV, CODE_NO
+    </select>
+
+</sqlMap>
